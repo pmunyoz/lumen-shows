@@ -1,0 +1,4 @@
+# Los paquetes se sirven byte a byte: convertir finales de línea rompería su integrityHash.
+v1/** -text
+*.mjs text eol=lf
+*.md text eol=lf
