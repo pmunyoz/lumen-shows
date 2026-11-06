@@ -1,6 +1,19 @@
 {
   "format": "lumen-events",
   "version": 1,
-  "updatedAt": "2026-11-06T00:00:00.000Z",
-  "events": []
+  "updatedAt": "2026-11-06T12:24:03.945Z",
+  "events": [
+    {
+      "eventId": "demo-pabellon",
+      "showId": "show_de_demostraci_n",
+      "version": "2.1.0",
+      "title": "Show de demostración",
+      "venueName": "Pabellón",
+      "packageUrl": "shows/show_de_demostraci_n-c32c54df3be4.json",
+      "packageIntegrityHash": "c32c54df3be41a2b5b31d4555a90c8127caec270e690efeadb50c98e709645cf",
+      "packageSizeBytes": 1105023,
+      "startAtUtc": "2026-11-06T00:00:00.000Z",
+      "endAtUtc": "2027-12-31T23:59:00.000Z"
+    }
+  ]
 }
