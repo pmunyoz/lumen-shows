@@ -20,13 +20,20 @@ concierto, el paquete del show, que guarda en el móvil para funcionar sin red e
 node scripts/publish.mjs ruta/al/show.json \
   --event-id pabellon-2026-12-01 \
   --start 2026-12-01T19:00:00Z --end 2026-12-01T23:59:00Z \
-  [--title "Gira 2026"] [--venue "Pabellón"] [--lat 40.4 --lon -3.7 --radius 1000]
+  [--title "Gira 2026"] [--venue "Pabellón"] [--lat 40.4 --lon -3.7 --radius 1000] \
+  [--notify-hours 3 --notify-radius 5000]
 git add -A && git commit -m "Publicar pabellon-2026-12-01" && git push
 ```
 
 El script comprueba el `integrityHash`, la versión (2.x), el tamaño (≤ 5 MB) y el número de syncs
 (1-5). Volver a publicar el mismo `eventId` sustituye su entrada. Los paquetes antiguos se conservan
 porque puede haber móviles que ya los tengan descargados.
+
+`--notify-hours` y `--notify-radius` configuran el aviso de Lumen Mobile para descargar el show
+antes del concierto: desde cuántas horas antes del inicio (0,5–24) y en qué radio alrededor del
+recinto en metros (500–50.000). Son opcionales; sin ellas la app usa 3 horas y 5 km. El radio
+solo tiene efecto si el evento lleva `--lat` y `--lon`: sin coordenadas, la app avisa solo por hora.
+Una opción desconocida o mal escrita hace fallar el script en lugar de ignorarse.
 
 ## Formato de `events.json` (v1)
 
@@ -50,8 +57,14 @@ porque puede haber móviles que ya los tengan descargados.
 }
 ```
 
-`packageUrl` es relativa a `events.json`. `venueLatitude`, `venueLongitude` y `geofenceRadiusMeters`
-son opcionales.
+`packageUrl` es relativa a `events.json`. Campos opcionales:
+
+| Campo | Opción de `publish.mjs` | Significado |
+|---|---|---|
+| `venueLatitude`, `venueLongitude` | `--lat`, `--lon` | Coordenadas del recinto |
+| `geofenceRadiusMeters` | `--radius` (por defecto 1000) | Radio en el que la app activa el show en el recinto |
+| `reminderHoursBefore` | `--notify-hours` | Horas antes de `startAtUtc` desde las que se avisa para descargar (la app usa 3 si falta) |
+| `reminderRadiusMeters` | `--notify-radius` | Radio en metros de la zona del aviso, independiente de `geofenceRadiusMeters` (la app usa 5000 si falta) |
 
 ## Límites de GitHub Pages
 
