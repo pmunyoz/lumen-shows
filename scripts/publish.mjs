@@ -3,6 +3,11 @@
 //
 //   node scripts/publish.mjs <show.json> --event-id <id> --start <ISO> --end <ISO>
 //        [--title <texto>] [--venue <texto>] [--lat <n> --lon <n>] [--radius <m>]
+//        [--notify-hours <h>] [--notify-radius <m>]
+//
+// --notify-hours y --notify-radius configuran el aviso de descarga de Lumen Mobile: cuántas horas
+// antes del inicio se avisa y el radio de la zona del recinto en la que se avisa. Sin ellas, el
+// evento se publica sin esos campos y la app usa sus valores por defecto (3 h y 5 km).
 //
 // El paquete se copia sin modificar a v1/shows/<showId>-<hash12>.json: el nombre cambia con el
 // contenido, así que ninguna caché sirve una versión antigua. Los paquetes anteriores no se borran
@@ -19,6 +24,9 @@ const SHOWS_DIR = join(ROOT, 'v1', 'shows');
 const MAX_PACKAGE_BYTES = 5 * 1024 * 1024; // = SecurityConstants.maxShowPackageSizeBytes de la app
 const SYNC_HZ = [18500, 19000, 19500, 18200, 17800]; // = SYNC_HZ de lumen-studio/src/app/core/cues.ts
 const EVENT_ID_RX = /^[a-z0-9][a-z0-9-]{2,63}$/;
+const NOTIFY_HOURS = { min: 0.5, max: 24 }; // horas antes del inicio
+const NOTIFY_RADIUS_M = { min: 500, max: 50_000 }; // metros alrededor del recinto
+const OPTIONS = ['event-id', 'start', 'end', 'title', 'venue', 'lat', 'lon', 'radius', 'notify-hours', 'notify-radius'];
 
 const fail = (msg) => {
   console.error(`Error: ${msg}`);
@@ -30,7 +38,9 @@ function parseArgs(argv) {
   const opts = {};
   for (let i = 0; i < rest.length; i += 2) {
     if (!rest[i]?.startsWith('--') || rest[i + 1] === undefined) fail(`argumento no válido: ${rest[i]}`);
-    opts[rest[i].slice(2)] = rest[i + 1];
+    const name = rest[i].slice(2);
+    if (!OPTIONS.includes(name)) fail(`opción desconocida: --${name}`);
+    opts[name] = rest[i + 1];
   }
   return { file, opts };
 }
@@ -44,6 +54,12 @@ const isoDate = (value, name) => {
 const num = (value, name) => {
   const n = Number(value);
   if (!Number.isFinite(n)) fail(`--${name} debe ser un número.`);
+  return n;
+};
+
+const inRange = (value, name, { min, max }, unit) => {
+  const n = num(value, name);
+  if (n < min || n > max) fail(`--${name} debe estar entre ${min} y ${max} ${unit}.`);
   return n;
 };
 
@@ -75,6 +91,20 @@ const startAtUtc = isoDate(opts.start, 'start');
 const endAtUtc = isoDate(opts.end, 'end');
 if (endAtUtc <= startAtUtc) fail('--end debe ser posterior a --start.');
 
+// Aviso de descarga (opcional). Se valida antes de escribir nada en disco.
+const hasCoordinates = opts.lat !== undefined || opts.lon !== undefined;
+const reminder = {
+  ...(opts['notify-hours'] !== undefined
+    ? { reminderHoursBefore: inRange(opts['notify-hours'], 'notify-hours', NOTIFY_HOURS, 'horas') }
+    : {}),
+  ...(opts['notify-radius'] !== undefined
+    ? { reminderRadiusMeters: inRange(opts['notify-radius'], 'notify-radius', NOTIFY_RADIUS_M, 'metros') }
+    : {}),
+};
+if (reminder.reminderRadiusMeters !== undefined && !hasCoordinates) {
+  console.warn('Aviso: --notify-radius sin --lat/--lon no tiene efecto; la app avisará solo por hora.');
+}
+
 const packageName = `${show.showId}-${show.integrityHash.slice(0, 12)}.json`;
 writeFileSync(join(SHOWS_DIR, packageName), raw);
 
@@ -89,13 +119,14 @@ const event = {
   packageSizeBytes: raw.length,
   startAtUtc,
   endAtUtc,
-  ...(opts.lat !== undefined || opts.lon !== undefined
+  ...(hasCoordinates
     ? {
         venueLatitude: num(opts.lat, 'lat'),
         venueLongitude: num(opts.lon, 'lon'),
         geofenceRadiusMeters: num(opts.radius ?? 1000, 'radius'),
       }
     : {}),
+  ...reminder,
 };
 
 const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
