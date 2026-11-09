@@ -1,7 +1,7 @@
 {
   "format": "lumen-events",
   "version": 1,
-  "updatedAt": "2026-11-06T12:24:03.945Z",
+  "updatedAt": "2026-11-09T23:20:23.315Z",
   "events": [
     {
       "eventId": "demo-pabellon",
@@ -14,6 +14,18 @@
       "packageSizeBytes": 1105023,
       "startAtUtc": "2026-11-06T00:00:00.000Z",
       "endAtUtc": "2027-12-31T23:59:00.000Z"
+    },
+    {
+      "eventId": "prueba-movil",
+      "showId": "show_de_demostraci_n",
+      "version": "2.1.0",
+      "title": "Prueba móvil",
+      "venueName": "Sala",
+      "packageUrl": "shows/show_de_demostraci_n-44dc03bf09c1.json",
+      "packageIntegrityHash": "44dc03bf09c1ca74048764cbe001d8bcab8d2180786ecf166352e58bb4bdee14",
+      "packageSizeBytes": 3040,
+      "startAtUtc": "2026-11-10T00:00:00.000Z",
+      "endAtUtc": "2026-12-31T23:59:00.000Z"
     }
   ]
 }
