@@ -1,0 +1,102 @@
+name: Publicar evento
+
+# Publica un evento sin clonar el repositorio (LUM-57). Lo lanza Lumen Studio («Exportar → Publicar
+# evento…», LUM-59) con un token fine-grained con permiso de escritura en Contents y Actions sobre este
+# repositorio (LUM-56); también se puede lanzar a mano desde la pestaña Actions.
+#
+# Antes de lanzarlo, Studio sube el paquete del show, sin modificar, a `incoming/show.json` de la rama
+# `publish/<eventId>`. El workflow lo valida con las mismas reglas que `scripts/publish.mjs`
+# (scripts/lib/publish-core.mjs), actualiza el catálogo en main y borra la rama. Si algo no es válido,
+# no toca el catálogo y deja el motivo como anotación de error de la ejecución.
+#
+# Mientras la suite sea privada, Studio publica en el catálogo de pruebas (`test` → v1/test/).
+run-name: 'Publicar ${{ inputs.event_id }} (${{ inputs.catalog }}) ${{ inputs.request_id }}'
+
+on:
+  workflow_dispatch:
+    inputs:
+      event_id:
+        description: 'Id del evento: minúsculas, números y guiones (3-64)'
+        required: true
+        type: string
+      catalog:
+        description: 'Catálogo: test (pruebas, v1/test/) o live (el de las apps de las tiendas, v1/)'
+        required: true
+        type: choice
+        options:
+          - test
+          - live
+        default: test
+      event:
+        description: 'Metadatos en JSON, con los nombres de las opciones de publish.mjs: {"start": "2026-12-01T19:00:00Z", "end": "...", "title": "...", "venue": "...", "lat": 40.4, "lon": -3.7, "radius": 1000, "notify-hours": 3, "notify-radius": 5000}'
+        required: true
+        type: string
+      branch:
+        description: 'Rama con el paquete en incoming/show.json (publish/<eventId>)'
+        required: true
+        type: string
+      request_id:
+        description: 'Id de la petición: Studio lo pone en el nombre de la ejecución para encontrarla'
+        required: false
+        type: string
+        default: ''
+
+# Las publicaciones van de una en una: cada una parte del catálogo que dejó la anterior.
+concurrency:
+  group: publish-catalog
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Validar y publicar
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Las entradas solo se usan como variables de entorno, nunca interpoladas en el script.
+    env:
+      EVENT_ID: ${{ inputs.event_id }}
+      CATALOG: ${{ inputs.catalog }}
+      EVENT_META: ${{ inputs.event }}
+      BRANCH: ${{ inputs.branch }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Descargar el paquete de la rama
+        shell: bash
+        run: |
+          error() { echo "::error title=Publicar evento::$1"; exit 1; }
+          [[ "$BRANCH" == "publish/$EVENT_ID" ]] || error "la rama debe ser publish/<eventId> (publish/$EVENT_ID)."
+          [[ "$BRANCH" =~ ^publish/[a-z0-9][a-z0-9-]{2,63}$ ]] || error "--event-id: minúsculas, números y guiones (3-64)."
+          git fetch --no-tags --depth=1 origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" \
+            || error "no existe la rama $BRANCH."
+          git cat-file blob "origin/$BRANCH:incoming/show.json" > "$RUNNER_TEMP/show.json" \
+            || error "la rama $BRANCH no tiene incoming/show.json."
+          echo "PACKAGE_FILE=$RUNNER_TEMP/show.json" >> "$GITHUB_ENV"
+
+      - name: Validar y actualizar el catálogo
+        run: node scripts/publish-event.mjs
+
+      - name: Publicar en main
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add v1
+          git commit -m "Publicar $EVENT_ID ($CATALOG)"
+          git push origin HEAD:main
+
+      - name: Borrar la rama de publicación
+        if: always() && startsWith(inputs.branch, 'publish/')
+        shell: bash
+        run: git push origin --delete "$BRANCH" || echo 'La rama ya no existe.'
