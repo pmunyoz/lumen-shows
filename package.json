@@ -1,0 +1,12 @@
+{
+  "name": "lumen-shows",
+  "private": true,
+  "description": "Catálogo público de eventos de Lumen (GitHub Pages)",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test \"scripts/**/*.test.mjs\""
+  }
+}

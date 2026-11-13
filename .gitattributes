@@ -2,3 +2,5 @@
 v1/** -text
 *.mjs text eol=lf
 *.md text eol=lf
+# Paquete que sube Lumen Studio a la rama publish/<eventId>: se publica byte a byte.
+incoming/** -text
