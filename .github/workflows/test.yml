@@ -1,0 +1,39 @@
+name: Tests
+
+# Validaciones de publicación (scripts/lib/publish-core.mjs). El repositorio es público: los workflows
+# no gastan minutos de Actions.
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'scripts/**'
+      - 'package.json'
+      - '.github/workflows/test.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/**'
+      - 'package.json'
+      - '.github/workflows/test.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests de publicación
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Tests
+        run: npm test
