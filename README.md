@@ -12,7 +12,7 @@ concierto, el paquete del show, que guarda en el móvil para funcionar sin red e
 |---|---|
 | `v1/events.json` | Catálogo: lista de eventos con horario, recinto y paquete |
 | `v1/shows/<showId>-<hash12>.json` | Paquetes exportados por Lumen Studio, sin modificar e inmutables |
-| `v1/test/` | Catálogo de pruebas (mismo formato): lo que publica Lumen Studio mientras la suite sea privada. Solo lo lee Lumen Mobile en desarrollo |
+| `v1/test/` | Catálogo de pruebas (mismo formato): lo que publica Lumen Studio mientras la suite sea privada. Lo leerán las compilaciones de desarrollo de Lumen Mobile (LUM-64); hoy Mobile solo lee `v1/` |
 | `scripts/publish.mjs` | Publica un export de Studio y actualiza el catálogo |
 | `scripts/lib/publish-core.mjs` | Validaciones y escritura del catálogo, comunes a `publish.mjs` y al workflow |
 | `.github/workflows/publish-event.yml` | Workflow «Publicar evento»: publica sin clonar el repositorio |
@@ -52,9 +52,11 @@ Lumen Studio publica con el workflow [`publish-event.yml`](.github/workflows/pub
 3. El workflow valida igual que `publish.mjs`, hace commit del catálogo en `main` y borra la rama. Si
    algo no es válido no toca el catálogo, y el motivo queda como anotación de error de la ejecución.
 
-Hace falta permiso de escritura en el repositorio: Studio usa un token *fine-grained* con
-**Contents** y **Actions** de lectura y escritura solo sobre `lumen-shows`. Mientras la suite sea
-privada, Studio publica en el catálogo de pruebas.
+Studio usa un token *fine-grained* con acceso solo a `lumen-shows` y `lumen-shows-audio` (donde
+guarda en privado el audio de disparos de cada evento): **Contents** y **Actions** de lectura y
+escritura, y **Checks** de solo lectura (para leer los errores de la ejecución). Mientras la suite
+sea privada, Studio publica en el catálogo de pruebas. Cómo crearlo y usarlo: manual de usuario de
+Studio, «Paso 9 · Publicar el evento».
 
 ## Tests
 
